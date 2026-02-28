@@ -4,14 +4,14 @@ import { LayoutDashboard, BarChart3, TrendingUp, AlertTriangle, FileText, Settin
 import { motion } from 'framer-motion';
 
 const menuItems = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', active: true },
-    { icon: <BarChart3 size={20} />, label: 'Market Analysis' },
-    { icon: <TrendingUp size={20} />, label: 'Asset Similarity' },
-    { icon: <AlertTriangle size={20} />, label: 'Risk Portfolio' },
-    { icon: <FileText size={20} />, label: 'Reports' },
+    { icon: <LayoutDashboard size={20} />, label: 'Panel Principal' },
+    { icon: <BarChart3 size={20} />, label: 'Análisis de Mercado' },
+    { icon: <TrendingUp size={20} />, label: 'Similitud de Activos' },
+    { icon: <AlertTriangle size={20} />, label: 'Portafolio de Riesgos' },
+    { icon: <FileText size={20} />, label: 'Reportes' },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ activeTab, onTabChange }) => {
     return (
         <Box
             sx={{
@@ -45,7 +45,7 @@ const Sidebar = () => {
                     <TrendingUp color="#050812" size={24} />
                 </Box>
                 <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: -0.5 }}>
-                    Finance<span style={{ color: '#00e676' }}>IQ</span>
+                    Finanzas<span style={{ color: '#00e676' }}>IQ</span>
                 </Typography>
             </Stack>
 
@@ -56,23 +56,24 @@ const Sidebar = () => {
                         component={motion.div}
                         whileHover={{ x: 4 }}
                         whileTap={{ scale: 0.98 }}
+                        onClick={() => onTabChange(item.label)}
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
                             p: 1.5,
                             borderRadius: 2,
                             cursor: 'pointer',
-                            bgcolor: item.active ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                            color: item.active ? 'primary.main' : 'text.secondary',
+                            bgcolor: activeTab === item.label ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                            color: activeTab === item.label ? 'primary.main' : 'text.secondary',
                             transition: 'all 0.2s',
                             '&:hover': {
-                                bgcolor: item.active ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                                bgcolor: activeTab === item.label ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255, 255, 255, 0.03)',
                                 color: 'primary.main',
                             },
                         }}
                     >
                         {item.icon}
-                        <Typography sx={{ ml: 2, fontWeight: item.active ? 600 : 400, fontSize: '0.95rem' }}>
+                        <Typography sx={{ ml: 2, fontWeight: activeTab === item.label ? 600 : 400, fontSize: '0.95rem' }}>
                             {item.label}
                         </Typography>
                     </Box>
@@ -95,8 +96,8 @@ const Sidebar = () => {
                         <Settings size={16} />
                     </Box>
                     <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Admin User</Typography>
-                        <Typography variant="caption" color="text.secondary">Software Engineer</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>Usuario Administrador</Typography>
+                        <Typography variant="caption" color="text.secondary">Ingeniero de Software</Typography>
                     </Box>
                 </Stack>
             </Box>

@@ -6,14 +6,14 @@ import { Box, Typography } from '@mui/material';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const PatternBarChart = ({ patterns, loading }) => {
-    if (loading) return <Typography>Loading bars...</Typography>;
-    if (!patterns) return <Typography color="text.secondary">No data.</Typography>;
+    if (loading) return <Typography>Cargando barras...</Typography>;
+    if (!patterns) return <Typography color="text.secondary">Sin datos.</Typography>;
 
     const data = {
-        labels: ['Consecutive Up', 'Bullish Engulfing'],
+        labels: ['Consecutivos al Alza', 'Envolvente Alcista'],
         datasets: [
             {
-                label: 'Frequency',
+                label: 'Frecuencia',
                 data: [patterns.consecutiveUp || 0, patterns.bullishEngulfing || 0],
                 backgroundColor: [
                     'rgba(0, 230, 118, 0.6)',
@@ -53,6 +53,9 @@ const PatternBarChart = ({ patterns, loading }) => {
 
     return (
         <Box sx={{ height: 200, mt: 2 }}>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1, fontStyle: 'italic' }}>
+                * Calculado mediante algoritmo de ventana deslizante (Sliding Window)
+            </Typography>
             <Bar data={data} options={options} />
         </Box>
     );

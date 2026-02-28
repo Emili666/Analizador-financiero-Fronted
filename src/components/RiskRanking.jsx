@@ -3,8 +3,8 @@ import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 import { Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 const RiskRanking = ({ assets, loading }) => {
-    if (loading) return <Typography>Analyzing risk levels...</Typography>;
-    if (!assets || assets.length === 0) return <Typography color="text.secondary">No asset data.</Typography>;
+    if (loading) return <Typography>Analizando niveles de riesgo...</Typography>;
+    if (!assets || assets.length === 0) return <Typography color="text.secondary">No hay datos de activos.</Typography>;
 
     // Sorting assets by risk (Agresivo > Moderado > Conservador)
     const riskOrder = { 'Agresivo': 3, 'Moderado': 2, 'Conservador': 1 };
@@ -24,9 +24,9 @@ const RiskRanking = ({ assets, loading }) => {
             <Table stickyHeader size="small">
                 <TableHead>
                     <TableRow>
-                        <TableCell sx={{ bgcolor: '#102030', color: 'text.secondary', fontWeight: 600 }}>Asset</TableCell>
-                        <TableCell sx={{ bgcolor: '#102030', color: 'text.secondary', fontWeight: 600 }}>Algorithm Risk</TableCell>
-                        <TableCell align="right" sx={{ bgcolor: '#102030', color: 'text.secondary', fontWeight: 600 }}>Volatility</TableCell>
+                        <TableCell sx={{ bgcolor: '#102030', color: 'text.secondary', fontWeight: 600 }}>Activo</TableCell>
+                        <TableCell sx={{ bgcolor: '#102030', color: 'text.secondary', fontWeight: 600 }}>Riesgo según Algoritmo</TableCell>
+                        <TableCell align="right" sx={{ bgcolor: '#102030', color: 'text.secondary', fontWeight: 600 }}>Volatilidad</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -61,6 +61,11 @@ const RiskRanking = ({ assets, loading }) => {
                     })}
                 </TableBody>
             </Table>
+            <Box sx={{ p: 1, bgcolor: '#102030' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    * Riesgo asignado estrictamente por Volatilidad Histórica (Desviación Estándar Anualizada).
+                </Typography>
+            </Box>
         </TableContainer>
     );
 };

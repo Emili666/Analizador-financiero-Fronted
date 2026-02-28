@@ -13,16 +13,18 @@ const AssetSelector = ({ assets, selectedAsset, onSelect }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 2,
             }}
         >
             <Stack direction="row" spacing={2} alignItems="center">
                 <Search size={20} color="rgba(255, 255, 255, 0.5)" />
-                <Typography variant="body1" sx={{ fontWeight: 500, color: 'text.secondary' }}>
-                    Select Asset for Analysis
+                <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                    Seleccionar Activo
                 </Typography>
             </Stack>
 
-            <FormControl size="small" sx={{ minWidth: 200 }}>
+            <FormControl size="small" sx={{ flexGrow: 1, minWidth: 200, maxWidth: { sm: 300 } }}>
                 <Select
                     value={selectedAsset}
                     onChange={(e) => onSelect(e.target.value)}

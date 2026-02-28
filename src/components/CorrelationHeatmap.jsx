@@ -2,8 +2,8 @@ import React from 'react';
 import { Box, Typography, Tooltip, Stack } from '@mui/material';
 
 const CorrelationHeatmap = ({ assets, matrix, loading }) => {
-    if (loading) return <Typography>Generating matrix...</Typography>;
-    if (!assets || assets.length === 0 || !matrix) return <Typography color="text.secondary">No correlation data available.</Typography>;
+    if (loading) return <Typography>Generando matriz...</Typography>;
+    if (!assets || assets.length === 0 || !matrix) return <Typography color="text.secondary">No hay datos de correlación disponibles.</Typography>;
 
     // Matrix is expected to be { [symbol1]: { [symbol2]: score } }
     const symbols = assets.map(a => a.symbol).slice(0, 15); // Limit to 15 for better UI

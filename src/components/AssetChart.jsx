@@ -22,7 +22,7 @@ const AssetChart = ({ data, symbol, loading }) => {
         return {
             datasets: [
                 {
-                    label: `${symbol} Price`,
+                    label: `Precio ${symbol}`,
                     data: data.map(d => ({ x: d.date, y: d.close })),
                     borderColor: '#00e676',
                     backgroundColor: 'rgba(0, 230, 118, 0.1)',
@@ -103,7 +103,7 @@ const AssetChart = ({ data, symbol, loading }) => {
 
     return (
         <Box sx={{ height: '100%', width: '100%', pt: 2 }}>
-            {chartData ? <Line options={options} data={chartData} /> : <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>No data available</Typography>}
+            {chartData ? <Line options={options} data={chartData} /> : <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>No hay datos disponibles</Typography>}
         </Box>
     );
 };

@@ -4,12 +4,15 @@ import { Download, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 
 import Sidebar from './components/Sidebar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import AssetSelector from './components/AssetSelector';
 import AssetCandlestickChart from './components/AssetCandlestickChart';
 import SimilarityMatrix from './components/SimilarityMatrix';
 import PatternBarChart from './components/PatternBarChart';
 import RiskRanking from './components/RiskRanking';
 import CorrelationHeatmap from './components/CorrelationHeatmap';
+import AssetHistoryTable from './components/AssetHistoryTable';
+import ComparativeAnalysis from './components/ComparativeAnalysis';
 
 const theme = createTheme({
     palette: {
@@ -30,17 +33,20 @@ const theme = createTheme({
 const API_BASE = 'http://localhost:8080/api';
 
 function App() {
+    const [activeTab, setActiveTab] = useState('Panel Principal');
     const [assets, setAssets] = useState([]);
     const [selectedAsset, setSelectedAsset] = useState('');
     const [compareAsset, setCompareAsset] = useState('');
     const [chartData, setChartData] = useState([]);
+    const [compareChartData, setCompareChartData] = useState([]);
     const [similarities, setSimilarities] = useState([]);
     const [patterns, setPatterns] = useState(null);
     const [correlationMatrix, setCorrelationMatrix] = useState(null);
-    const [loading, setLoading] = useState({ chart: false, assets: false, matrix: false });
+    const [loading, setLoading] = useState({ chart: false, compareChart: false, assets: false, matrix: false });
 
     useEffect(() => {
         fetchAssets();
+        fetchCorrelationMatrix();
     }, []);
 
     useEffect(() => {
@@ -53,6 +59,7 @@ function App() {
     useEffect(() => {
         if (selectedAsset && compareAsset) {
             fetchSimilarities(selectedAsset, compareAsset);
+            fetchCompareChartData(compareAsset);
         }
     }, [selectedAsset, compareAsset]);
 
@@ -64,17 +71,30 @@ function App() {
             if (res.data.length > 0) {
                 setSelectedAsset(res.data[0].symbol);
                 setCompareAsset(res.data[1]?.symbol || res.data[0].symbol);
-
-                // Construct correlation matrix from asset data if available
-                // Or try to fetch a matrix endpoint if it existed
-                const matrix = {};
-                res.data.forEach(asset => {
-                    matrix[asset.symbol] = asset.correlations || {};
-                });
-                setCorrelationMatrix(matrix);
             }
         } catch (err) { console.error("Error fetching assets", err); }
         setLoading(prev => ({ ...prev, assets: false }));
+    };
+
+    const fetchCorrelationMatrix = async () => {
+        setLoading(prev => ({ ...prev, matrix: true }));
+        try {
+            const res = await axios.get(`${API_BASE}/correlation-matrix`);
+            // The backend returns { assets: ["AAPL", "MSFT"...], matrix: [[1, 0.5], [0.5, 1]] }
+            // The frontend map needs: { "AAPL": { "MSFT": 0.5 } }
+            const { assets: assetList, matrix: arrayMatrix } = res.data;
+            const formattedMatrix = {};
+
+            assetList.forEach((sym1, i) => {
+                formattedMatrix[sym1] = {};
+                assetList.forEach((sym2, j) => {
+                    formattedMatrix[sym1][sym2] = arrayMatrix[i][j];
+                });
+            });
+
+            setCorrelationMatrix(formattedMatrix);
+        } catch (err) { console.error("Error fetching matrix", err); }
+        setLoading(prev => ({ ...prev, matrix: false }));
     };
 
     const fetchChartData = async (symbol) => {
@@ -84,6 +104,15 @@ function App() {
             setChartData(res.data);
         } catch (err) { console.error("Error fetching chart", err); }
         setLoading(prev => ({ ...prev, chart: false }));
+    };
+
+    const fetchCompareChartData = async (symbol) => {
+        setLoading(prev => ({ ...prev, compareChart: true }));
+        try {
+            const res = await axios.get(`${API_BASE}/chart/${symbol}`);
+            setCompareChartData(res.data);
+        } catch (err) { console.error("Error fetching compare chart", err); }
+        setLoading(prev => ({ ...prev, compareChart: false }));
     };
 
     const fetchPatterns = async (symbol) => {
@@ -105,109 +134,221 @@ function App() {
         window.open(`${API_BASE}/report/pdf`, '_blank');
     };
 
+    const handleDownloadComparativeReport = () => {
+        if (selectedAsset && compareAsset) {
+            window.open(`${API_BASE}/report/comparative/pdf?sym1=${selectedAsset}&sym2=${compareAsset}`, '_blank');
+        }
+    };
+
     return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
-                <Sidebar />
-                <Box component="main" sx={{ flexGrow: 1, ml: '280px', p: 4 }}>
-                    <Container maxWidth="xl">
-                        {/* Header */}
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-                            <Box>
-                                <Typography variant="h4" gutterBottom color="primary.main">
-                                    Financial Analysis Lab
-                                </Typography>
-                                <Typography variant="body1" color="text.secondary">
-                                    Universidad del Quindío • Ingeniería de Sistemas
-                                </Typography>
-                            </Box>
-                            <Stack direction="row" spacing={2}>
-                                <IconButton onClick={fetchAssets} sx={{ color: 'text.secondary' }}>
-                                    <RefreshCw size={20} />
-                                </IconButton>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<Download size={18} />}
-                                    onClick={handleDownloadReport}
-                                    sx={{
-                                        bgcolor: 'rgba(0, 230, 118, 0.1)',
-                                        color: 'primary.main',
-                                        border: '1px solid rgba(0, 230, 118, 0.2)',
-                                        '&:hover': { bgcolor: 'rgba(0, 230, 118, 0.2)' },
-                                        fontWeight: 600,
-                                    }}
-                                >
-                                    Técnico PDF
-                                </Button>
+        <ErrorBoundary>
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
+                    <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+                    <Box component="main" sx={{ flexGrow: 1, ml: '280px', p: 4 }}>
+                        <Container maxWidth="xl">
+                            {/* Header */}
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+                                <Box>
+                                    <Typography variant="h4" gutterBottom color="primary.main">
+                                        Laboratorio de Análisis Financiero
+                                    </Typography>
+                                    <Typography variant="body1" color="text.secondary">
+                                        Universidad del Quindío • Ingeniería de Sistemas
+                                    </Typography>
+                                </Box>
+                                <Stack direction="row" spacing={2}>
+                                    <IconButton onClick={fetchAssets} sx={{ color: 'text.secondary' }}>
+                                        <RefreshCw size={20} />
+                                    </IconButton>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<Download size={18} />}
+                                        onClick={handleDownloadReport}
+                                        sx={{
+                                            bgcolor: 'rgba(0, 230, 118, 0.1)',
+                                            color: 'primary.main',
+                                            border: '1px solid rgba(0, 230, 118, 0.2)',
+                                            '&:hover': { bgcolor: 'rgba(0, 230, 118, 0.2)' },
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Reporte Técnico PDF
+                                    </Button>
+                                </Stack>
                             </Stack>
-                        </Stack>
 
-                        <Grid container spacing={3}>
-                            {/* Comparison Selectors */}
-                            <Grid item xs={12}>
-                                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                                    <Box sx={{ flex: 1 }}>
-                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Primary Asset</Typography>
-                                        <AssetSelector assets={assets} selectedAsset={selectedAsset} onSelect={setSelectedAsset} />
-                                    </Box>
-                                    <Box sx={{ flex: 1 }}>
-                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Compare vs</Typography>
-                                        <AssetSelector assets={assets} selectedAsset={compareAsset} onSelect={setCompareAsset} />
-                                    </Box>
-                                </Stack>
-                            </Grid>
+                            <Grid container spacing={3}>
+                                {activeTab === 'Panel Principal' && (
+                                    <>
+                                        <Grid item xs={12}>
+                                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Activo Principal</Typography>
+                                                    <AssetSelector assets={assets} selectedAsset={selectedAsset} onSelect={setSelectedAsset} />
+                                                </Box>
+                                            </Stack>
+                                        </Grid>
 
-                            {/* Main Chart */}
-                            <Grid item xs={12} xl={8}>
-                                <Paper sx={{ p: 3, height: 500, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                        <Typography variant="h6">Candlestick Analysis (OHLC)</Typography>
-                                        <Typography variant="caption" color="primary.main">SMA Algorithm Applied</Typography>
-                                    </Stack>
-                                    <AssetCandlestickChart data={chartData} symbol={selectedAsset} loading={loading.chart} />
-                                </Paper>
-                            </Grid>
+                                        <Grid item xs={12}>
+                                            <Paper sx={{ p: 3, height: 500, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                                    <Typography variant="h6">Análisis de Velas (OHLC)</Typography>
+                                                    <Typography variant="caption" color="primary.main">Algoritmo SMA Aplicado</Typography>
+                                                </Stack>
+                                                <AssetCandlestickChart data={chartData} symbol={selectedAsset} loading={loading.chart} />
+                                            </Paper>
+                                        </Grid>
 
-                            {/* Similarity & Patterns */}
-                            <Grid item xs={12} xl={4}>
-                                <Stack spacing={3} sx={{ height: '100%' }}>
-                                    <Paper sx={{ p: 3, flex: 1, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <Typography variant="h6" gutterBottom>1-vs-1 Similarity</Typography>
-                                        <Typography variant="caption" color="secondary.main" sx={{ display: 'block', mb: 2 }}>
-                                            {selectedAsset} vs {compareAsset}
-                                        </Typography>
-                                        <SimilarityMatrix similarities={similarities} />
-                                    </Paper>
-                                    <Paper sx={{ p: 3, flex: 1, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <Typography variant="h6" gutterBottom>Pattern Frequency</Typography>
-                                        <PatternBarChart patterns={patterns} />
-                                    </Paper>
-                                </Stack>
-                            </Grid>
+                                        <Grid item xs={12}>
+                                            <Paper sx={{ p: 3, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <Typography variant="h6" gutterBottom>Datos Históricos ({selectedAsset})</Typography>
+                                                <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>Precios Diarios, Volumen (OHLCV)</Typography>
+                                                <AssetHistoryTable data={chartData} symbol={selectedAsset} loading={loading.chart} />
+                                            </Paper>
+                                        </Grid>
+                                    </>
+                                )}
 
-                            {/* Global Correlation Matrix */}
-                            <Grid item xs={12} lg={7}>
-                                <Paper sx={{ p: 3, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <Typography variant="h6" gutterBottom>Global Correlation Heatmap</Typography>
-                                    <Typography variant="caption" color="text.secondary">Cross-asset similarity matrix (Pearson/Lineal)</Typography>
-                                    <CorrelationHeatmap assets={assets} matrix={correlationMatrix} loading={loading.assets} />
-                                </Paper>
-                            </Grid>
+                                {activeTab === 'Análisis de Mercado' && (
+                                    <>
+                                        <Grid item xs={12} lg={7}>
+                                            <Paper sx={{ p: 3, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <Typography variant="h6" gutterBottom>Mapa de Calor de Correlación Global</Typography>
+                                                <Typography variant="caption" color="text.secondary">Matriz de similitud cruzada (Pearson/Lineal)</Typography>
+                                                <CorrelationHeatmap assets={assets} matrix={correlationMatrix} loading={loading.assets} />
+                                            </Paper>
+                                        </Grid>
+                                        <Grid item xs={12} lg={5}>
+                                            <Paper sx={{ p: 3, height: '100%', bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <Typography variant="h6" gutterBottom>Frecuencia de Patrones</Typography>
+                                                <PatternBarChart patterns={patterns} />
+                                            </Paper>
+                                        </Grid>
+                                    </>
+                                )}
 
-                            {/* Risk Ranking */}
-                            <Grid item xs={12} lg={5}>
-                                <Paper sx={{ p: 3, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <Typography variant="h6" gutterBottom>Asset Risk Ranking</Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>Algorithmic Classification (Vol. Anual)</Typography>
-                                    <RiskRanking assets={assets} loading={loading.assets} />
-                                </Paper>
+                                {activeTab === 'Similitud de Activos' && (
+                                    <>
+                                        <Grid item xs={12}>
+                                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Activo Principal</Typography>
+                                                    <AssetSelector assets={assets} selectedAsset={selectedAsset} onSelect={setSelectedAsset} />
+                                                </Box>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Comparar con</Typography>
+                                                    <AssetSelector assets={assets} selectedAsset={compareAsset} onSelect={setCompareAsset} />
+                                                </Box>
+                                            </Stack>
+                                        </Grid>
+
+                                        <Grid item xs={12}>
+                                            <ComparativeAnalysis
+                                                s1={selectedAsset}
+                                                s2={compareAsset}
+                                                data1={chartData}
+                                                data2={compareChartData}
+                                                similarities={similarities}
+                                                loading={loading.chart || loading.compareChart}
+                                            />
+                                        </Grid>
+
+                                        <Grid item xs={12}>
+                                            <Paper sx={{ p: 3, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                                                    <Box>
+                                                        <Typography variant="h6" gutterBottom>Similitud 1-vs-1 (Detalles)</Typography>
+                                                        <Typography variant="caption" color="secondary.main" sx={{ display: 'block' }}>
+                                                            {selectedAsset} vs {compareAsset}
+                                                        </Typography>
+                                                    </Box>
+                                                </Stack>
+                                                <SimilarityMatrix similarities={similarities} />
+                                            </Paper>
+                                        </Grid>
+                                    </>
+                                )}
+
+                                {activeTab === 'Portafolio de Riesgos' && (
+                                    <Grid item xs={12}>
+                                        <Paper sx={{ p: 3, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <Typography variant="h6" gutterBottom>Ranking de Riesgo de Activos</Typography>
+                                            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>Clasificación Algorítmica (Vol. Anual)</Typography>
+                                            <RiskRanking assets={assets} loading={loading.assets} />
+                                        </Paper>
+                                    </Grid>
+                                )}
+
+                                {activeTab === 'Reportes' && (
+                                    <Grid item xs={12}>
+                                        <Stack spacing={4}>
+                                            <Paper sx={{ p: 4, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <Typography variant="h6" gutterBottom>Reporte Técnico Global (PDF)</Typography>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                                    Descarga un informe completo que incluye el análisis de mercado de todos los activos,
+                                                    el mapa de correlación global y el ranking de riesgos de tu portafolio.
+                                                </Typography>
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={<Download size={18} />}
+                                                    onClick={handleDownloadReport}
+                                                    sx={{
+                                                        bgcolor: 'primary.main',
+                                                        color: '#000',
+                                                        fontWeight: 600,
+                                                        px: 4, py: 1.5,
+                                                        '&:hover': { bgcolor: '#00c853' }
+                                                    }}
+                                                >
+                                                    Generar Reporte Completo
+                                                </Button>
+                                            </Paper>
+
+                                            <Paper sx={{ p: 4, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <Typography variant="h6" gutterBottom>Reporte de Análisis Comparativo (PDF)</Typography>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                                                    Genera un documento que exponga las diferencias y similitudes detalladas entre dos activos en particular.
+                                                    Requiere haber seleccionado dos activos.
+                                                </Typography>
+
+                                                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Activo 1</Typography>
+                                                        <AssetSelector assets={assets} selectedAsset={selectedAsset} onSelect={setSelectedAsset} />
+                                                    </Box>
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Activo 2</Typography>
+                                                        <AssetSelector assets={assets} selectedAsset={compareAsset} onSelect={setCompareAsset} />
+                                                    </Box>
+                                                </Stack>
+
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={<Download size={18} />}
+                                                    onClick={handleDownloadComparativeReport}
+                                                    disabled={!selectedAsset || !compareAsset}
+                                                    sx={{
+                                                        bgcolor: 'secondary.main',
+                                                        color: '#fff',
+                                                        fontWeight: 600,
+                                                        px: 4, py: 1.5,
+                                                        '&:hover': { bgcolor: '#2962ff' }
+                                                    }}
+                                                >
+                                                    Generar Reporte Comparativo
+                                                </Button>
+                                            </Paper>
+                                        </Stack>
+                                    </Grid>
+                                )}
                             </Grid>
-                        </Grid>
-                    </Container>
+                        </Container>
+                    </Box>
                 </Box>
-            </Box>
-        </ThemeProvider>
+            </ThemeProvider>
+        </ErrorBoundary>
     );
 }
 

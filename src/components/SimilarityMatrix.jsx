@@ -2,8 +2,8 @@ import React from 'react';
 import { Box, Typography, Stack, Tooltip } from '@mui/material';
 
 const SimilarityHeatmap = ({ similarities, loading }) => {
-    if (loading) return <Typography>Loading heatmap...</Typography>;
-    if (!similarities || similarities.length === 0) return <Typography color="text.secondary">No comparison data.</Typography>;
+    if (loading) return <Typography>Cargando mapa de calor...</Typography>;
+    if (!similarities || similarities.length === 0) return <Typography color="text.secondary">No hay datos de comparación.</Typography>;
 
     // Helper to get color based on score
     // Assumes scores are normalized or we just use relative mapping for visual impact
