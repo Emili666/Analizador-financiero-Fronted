@@ -13,6 +13,7 @@ import RiskRanking from './components/RiskRanking';
 import CorrelationHeatmap from './components/CorrelationHeatmap';
 import AssetHistoryTable from './components/AssetHistoryTable';
 import ComparativeAnalysis from './components/ComparativeAnalysis';
+import SortingBenchmark from './components/SortingBenchmark';
 
 const theme = createTheme({
     palette: {
@@ -278,6 +279,12 @@ function App() {
                                             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>Clasificación Algorítmica (Vol. Anual)</Typography>
                                             <RiskRanking assets={assets} loading={loading.assets} />
                                         </Paper>
+                                    </Grid>
+                                )}
+
+                                {activeTab === 'Benchmarks de Ordenamiento' && (
+                                    <Grid item xs={12}>
+                                        <SortingBenchmark apiBase={API_BASE} />
                                     </Grid>
                                 )}
 

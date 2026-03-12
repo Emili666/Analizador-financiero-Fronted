@@ -8,6 +8,7 @@ const menuItems = [
     { icon: <BarChart3 size={20} />, label: 'Análisis de Mercado' },
     { icon: <TrendingUp size={20} />, label: 'Similitud de Activos' },
     { icon: <AlertTriangle size={20} />, label: 'Portafolio de Riesgos' },
+    { icon: <TrendingUp size={20} />, label: 'Benchmarks de Ordenamiento' },
     { icon: <FileText size={20} />, label: 'Reportes' },
 ];
 
