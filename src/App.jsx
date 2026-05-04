@@ -14,6 +14,7 @@ import CorrelationHeatmap from './components/CorrelationHeatmap';
 import AssetHistoryTable from './components/AssetHistoryTable';
 import ComparativeAnalysis from './components/ComparativeAnalysis';
 import SortingBenchmark from './components/SortingBenchmark';
+import SimilarityBenchmark from './components/SimilarityBenchmark';
 import CurrencySelector from './components/CurrencySelector';
 import { useCurrency } from './hooks/useCurrency';
 
@@ -317,7 +318,14 @@ function App() {
 
                                 {activeTab === 'Benchmarks de Ordenamiento' && (
                                     <Grid item xs={12}>
-                                        <SortingBenchmark apiBase={API_BASE} />
+                                        <Stack spacing={4}>
+                                            <SimilarityBenchmark
+                                                apiBase={API_BASE}
+                                                sym1={selectedAsset}
+                                                sym2={compareAsset}
+                                            />
+                                            <SortingBenchmark apiBase={API_BASE} />
+                                        </Stack>
                                     </Grid>
                                 )}
 
