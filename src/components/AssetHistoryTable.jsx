@@ -4,7 +4,7 @@ import {
     Paper, Typography, Box, TablePagination, CircularProgress
 } from '@mui/material';
 
-const AssetHistoryTable = ({ data, loading, symbol }) => {
+const AssetHistoryTable = ({ data, loading, symbol, format: formatCurrencyProp }) => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -20,33 +20,21 @@ const AssetHistoryTable = ({ data, loading, symbol }) => {
         return <Typography color="text.secondary" sx={{ p: 2 }}>No hay datos históricos disponibles.</Typography>;
     }
 
-    // Sort descending by date (newest first)
     const sortedHistory = [...data.history].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
+    const handleChangePage = (_, newPage) => setPage(newPage);
+    const handleChangeRowsPerPage = (e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); };
 
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
+    // Usar el formateador de moneda pasado como prop, o fallback a USD
+    const formatPrice = formatCurrencyProp
+        ? (val) => formatCurrencyProp(val, symbol)
+        : (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
-    const formatCurrency = (val) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-    };
+    const formatVolume = (val) => new Intl.NumberFormat('en-US').format(val);
 
-    const formatVolume = (val) => {
-        return new Intl.NumberFormat('en-US').format(val);
-    };
-
-    const formatDate = (dateStr) => {
-        return new Date(dateStr).toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
+    const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('es-ES', {
+        year: 'numeric', month: 'short', day: 'numeric'
+    });
 
     return (
         <Box sx={{ width: '100%', mt: 2 }}>
@@ -66,10 +54,10 @@ const AssetHistoryTable = ({ data, loading, symbol }) => {
                         {sortedHistory.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row, idx) => (
                             <TableRow key={idx} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                                 <TableCell component="th" scope="row">{formatDate(row.date)}</TableCell>
-                                <TableCell align="right">{formatCurrency(row.open)}</TableCell>
-                                <TableCell align="right">{formatCurrency(row.high)}</TableCell>
-                                <TableCell align="right">{formatCurrency(row.low)}</TableCell>
-                                <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 500 }}>{formatCurrency(row.close)}</TableCell>
+                                <TableCell align="right">{formatPrice(row.open)}</TableCell>
+                                <TableCell align="right">{formatPrice(row.high)}</TableCell>
+                                <TableCell align="right">{formatPrice(row.low)}</TableCell>
+                                <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 500 }}>{formatPrice(row.close)}</TableCell>
                                 <TableCell align="right">{formatVolume(row.volume)}</TableCell>
                             </TableRow>
                         ))}

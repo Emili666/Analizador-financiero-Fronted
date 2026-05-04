@@ -14,6 +14,8 @@ import CorrelationHeatmap from './components/CorrelationHeatmap';
 import AssetHistoryTable from './components/AssetHistoryTable';
 import ComparativeAnalysis from './components/ComparativeAnalysis';
 import SortingBenchmark from './components/SortingBenchmark';
+import CurrencySelector from './components/CurrencySelector';
+import { useCurrency } from './hooks/useCurrency';
 
 const theme = createTheme({
     palette: {
@@ -43,7 +45,9 @@ function App() {
     const [similarities, setSimilarities] = useState([]);
     const [patterns, setPatterns] = useState(null);
     const [correlationMatrix, setCorrelationMatrix] = useState(null);
+    const [windowSize, setWindowSize] = useState(3);
     const [loading, setLoading] = useState({ chart: false, compareChart: false, assets: false, matrix: false });
+    const { currency, setCurrency, convert, format, currencyInfo } = useCurrency();
 
     useEffect(() => {
         fetchAssets();
@@ -116,11 +120,16 @@ function App() {
         setLoading(prev => ({ ...prev, compareChart: false }));
     };
 
-    const fetchPatterns = async (symbol) => {
+    const fetchPatterns = async (symbol, ws = windowSize) => {
         try {
-            const res = await axios.get(`${API_BASE}/patterns/${symbol}`);
+            const res = await axios.get(`${API_BASE}/patterns/${symbol}?windowSize=${ws}`);
             setPatterns(res.data);
         } catch (err) { console.error("Error fetching patterns", err); }
+    };
+
+    const handleWindowChange = (newSize) => {
+        setWindowSize(newSize);
+        if (selectedAsset) fetchPatterns(selectedAsset, newSize);
     };
 
     const fetchSimilarities = async (s1, s2) => {
@@ -184,10 +193,13 @@ function App() {
                                 {activeTab === 'Panel Principal' && (
                                     <>
                                         <Grid item xs={12}>
-                                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="flex-end">
                                                 <Box sx={{ flex: 1 }}>
                                                     <Typography variant="caption" color="text.secondary" sx={{ ml: 1, mb: 0.5, display: 'block' }}>Activo Principal</Typography>
                                                     <AssetSelector assets={assets} selectedAsset={selectedAsset} onSelect={setSelectedAsset} />
+                                                </Box>
+                                                <Box sx={{ pb: 0.5 }}>
+                                                    <CurrencySelector currency={currency} onChange={setCurrency} />
                                                 </Box>
                                             </Stack>
                                         </Grid>
@@ -196,17 +208,38 @@ function App() {
                                             <Paper sx={{ p: 3, height: 500, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
                                                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                                                     <Typography variant="h6">Análisis de Velas (OHLC)</Typography>
-                                                    <Typography variant="caption" color="primary.main">Algoritmo SMA Aplicado</Typography>
+                                                    <Stack direction="row" spacing={2} alignItems="center">
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {currencyInfo.flag} Precios en {currencyInfo.code} — {currencyInfo.label}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="primary.main">Algoritmo SMA Aplicado</Typography>
+                                                    </Stack>
                                                 </Stack>
-                                                <AssetCandlestickChart data={chartData} symbol={selectedAsset} loading={loading.chart} />
+                                                <AssetCandlestickChart
+                                                    data={chartData}
+                                                    symbol={selectedAsset}
+                                                    loading={loading.chart}
+                                                    convert={convert}
+                                                    format={format}
+                                                    currency={currency}
+                                                />
                                             </Paper>
                                         </Grid>
 
                                         <Grid item xs={12}>
                                             <Paper sx={{ p: 3, bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <Typography variant="h6" gutterBottom>Datos Históricos ({selectedAsset})</Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>Precios Diarios, Volumen (OHLCV)</Typography>
-                                                <AssetHistoryTable data={chartData} symbol={selectedAsset} loading={loading.chart} />
+                                                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                                                    <Box>
+                                                        <Typography variant="h6">Datos Históricos ({selectedAsset})</Typography>
+                                                        <Typography variant="caption" color="text.secondary">Precios Diarios OHLCV — {currencyInfo.flag} {currencyInfo.code}</Typography>
+                                                    </Box>
+                                                </Stack>
+                                                <AssetHistoryTable
+                                                    data={chartData}
+                                                    symbol={selectedAsset}
+                                                    loading={loading.chart}
+                                                    format={format}
+                                                />
                                             </Paper>
                                         </Grid>
                                     </>
@@ -224,7 +257,7 @@ function App() {
                                         <Grid item xs={12} lg={5}>
                                             <Paper sx={{ p: 3, height: '100%', bgcolor: 'rgba(16, 32, 48, 0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)' }}>
                                                 <Typography variant="h6" gutterBottom>Frecuencia de Patrones</Typography>
-                                                <PatternBarChart patterns={patterns} />
+                                                <PatternBarChart patterns={patterns} windowSize={windowSize} onWindowChange={handleWindowChange} />
                                             </Paper>
                                         </Grid>
                                     </>

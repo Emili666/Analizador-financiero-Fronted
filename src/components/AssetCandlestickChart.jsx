@@ -6,19 +6,16 @@ import { CandlestickController, CandlestickElement } from 'chartjs-chart-financi
 import { Box, Typography, CircularProgress } from '@mui/material';
 
 ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    TimeScale,
-    Title,
-    Tooltip,
-    Legend,
-    CandlestickController,
-    CandlestickElement
+    CategoryScale, LinearScale, PointElement, LineElement,
+    TimeScale, Title, Tooltip, Legend,
+    CandlestickController, CandlestickElement
 );
 
-const AssetLineChart = ({ data, symbol, loading }) => {
+const AssetCandlestickChart = ({ data, symbol, loading, convert, format, currency }) => {
+    // Funciones de conversión por defecto si no se pasan (compatibilidad)
+    const cvt = convert || ((v) => v);
+    const fmt = format || ((v) => v?.toFixed(2) ?? '—');
+
     const chartData = useMemo(() => {
         if (!data || !data.history || !Array.isArray(data.history) || data.history.length === 0) return null;
 
@@ -28,37 +25,26 @@ const AssetLineChart = ({ data, symbol, loading }) => {
                 type: 'candlestick',
                 data: data.history.map(d => ({
                     x: new Date(d.date).valueOf(),
-                    o: d.open,
-                    h: d.high,
-                    l: d.low,
-                    c: d.close,
-                    v: d.volume
+                    o: cvt(d.open,  symbol),
+                    h: cvt(d.high,  symbol),
+                    l: cvt(d.low,   symbol),
+                    c: cvt(d.close, symbol),
+                    v: d.volume,
                 })),
-                color: {
-                    up: '#00e676',
-                    down: '#ff1744',
-                    unchanged: '#9e9e9e',
-                },
-                borderColor: {
-                    up: '#00e676',
-                    down: '#ff1744',
-                    unchanged: '#9e9e9e',
-                }
+                color:       { up: '#00e676', down: '#ff1744', unchanged: '#9e9e9e' },
+                borderColor: { up: '#00e676', down: '#ff1744', unchanged: '#9e9e9e' },
             }
         ];
 
         if (data.sma20 && data.sma20.length > 0) {
-            const smaLength = data.sma20.length;
-            const historyLength = data.history.length;
-            const offset = historyLength - smaLength;
-            const smaData = data.sma20.map((val, i) => ({
-                x: new Date(data.history[i + offset].date).valueOf(),
-                y: val
-            }));
+            const offset = data.history.length - data.sma20.length;
             datasets.push({
-                label: `SMA(20)`,
+                label: 'SMA(20)',
                 type: 'line',
-                data: smaData,
+                data: data.sma20.map((val, i) => ({
+                    x: new Date(data.history[i + offset].date).valueOf(),
+                    y: cvt(val, symbol),
+                })),
                 borderColor: '#2979ff',
                 backgroundColor: 'transparent',
                 fill: false,
@@ -70,7 +56,7 @@ const AssetLineChart = ({ data, symbol, loading }) => {
         }
 
         return { datasets };
-    }, [data, symbol]);
+    }, [data, symbol, currency]); // re-calcular cuando cambia la moneda
 
     const options = {
         responsive: true,
@@ -81,18 +67,17 @@ const AssetLineChart = ({ data, symbol, loading }) => {
                 backgroundColor: 'rgba(16, 32, 48, 0.9)',
                 titleColor: '#fff',
                 callbacks: {
-                    label: function (context) {
-                        const datasetLabel = context.dataset.label || '';
-                        if (datasetLabel === 'SMA (20)') {
-                            return `SMA 20: ${context.parsed.y.toFixed(2)}`;
+                    label: (ctx) => {
+                        if (ctx.dataset.label === 'SMA(20)') {
+                            return `SMA 20: ${fmt(ctx.raw?.y ?? ctx.parsed.y, symbol)}`;
                         }
-                        const point = context.raw;
+                        const p = ctx.raw;
                         return [
-                            `Apertura: $${point.o.toFixed(2)}`,
-                            `Máximo: $${point.h.toFixed(2)}`,
-                            `Mínimo: $${point.l.toFixed(2)}`,
-                            `Cierre: $${point.c.toFixed(2)}`,
-                            `Volumen: ${point.v.toLocaleString()}`,
+                            `Apertura: ${fmt(p.o, symbol)}`,
+                            `Máximo:   ${fmt(p.h, symbol)}`,
+                            `Mínimo:   ${fmt(p.l, symbol)}`,
+                            `Cierre:   ${fmt(p.c, symbol)}`,
+                            `Volumen:  ${p.v?.toLocaleString() ?? '—'}`,
                         ];
                     }
                 }
@@ -103,12 +88,15 @@ const AssetLineChart = ({ data, symbol, loading }) => {
                 type: 'time',
                 time: { unit: 'month' },
                 grid: { display: false },
-                ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+                ticks: { color: 'rgba(255,255,255,0.5)' },
             },
             y: {
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: { color: 'rgba(255, 255, 255, 0.5)' }
-            }
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: {
+                    color: 'rgba(255,255,255,0.5)',
+                    callback: (val) => fmt(val, symbol),
+                },
+            },
         },
     };
 
@@ -122,9 +110,12 @@ const AssetLineChart = ({ data, symbol, loading }) => {
 
     return (
         <Box sx={{ height: '100%', width: '100%', pt: 2 }}>
-            {chartData ? <Chart type='candlestick' options={options} data={chartData} /> : <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>No hay datos disponibles</Typography>}
+            {chartData
+                ? <Chart type="candlestick" options={options} data={chartData} />
+                : <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>No hay datos disponibles</Typography>
+            }
         </Box>
     );
 };
 
-export default AssetLineChart;
+export default AssetCandlestickChart;
